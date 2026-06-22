@@ -15,16 +15,15 @@
       {
         "label": "main",
         "title": "Tamapokon",
-        "width": 320,
-        "height": 360,
-        "minWidth": 240,
-        "minHeight": 280,
+        "width": 280,
+        "height": 340,
         "resizable": false,
         "decorations": false,
         "transparent": true,
         "alwaysOnTop": true,
         "shadow": false,
-        "center": true
+        "skipTaskbar": true,
+        "visibleOnAllWorkspaces": true
       }
     ],
     "security": {

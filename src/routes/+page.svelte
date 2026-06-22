@@ -1,98 +1,136 @@
 <script lang="ts">
-  import { getCurrentWindow } from "@tauri-apps/api/window";
+  import { onMount } from "svelte";
+  import "@fontsource/pixelify-sans/400.css";
+  import "@fontsource/pixelify-sans/600.css";
+  import "@fontsource/pixelify-sans/700.css";
+  import { game, init, pause, resume, save, dispose } from "$lib/game/state.svelte";
+  import EggSelect from "$lib/components/EggSelect.svelte";
+  import Incubation from "$lib/components/Incubation.svelte";
+  import Hatching from "$lib/components/Hatching.svelte";
+  import Creature from "$lib/components/Creature.svelte";
+  import Settings from "$lib/components/Settings.svelte";
 
-  // Placeholder de démarrage — l'aventure commence par un œuf (cf. docs/Spécification Tamagotchi.md).
-  // Le vrai gameplay (choix des 4 œufs, incubation ~30 h temps app-actif, éclosion-reveal,
-  // stats, sauvegarde avec pause hors-app) sera construit par-dessus ce socle.
+  let showSettings = $state(false);
 
-  const appWindow = getCurrentWindow();
+  onMount(() => {
+    void init();
+
+    // Temps app-actif : on gèle la créature quand la fenêtre est masquée/minimisée.
+    const onVisibility = () => (document.hidden ? pause() : resume());
+    document.addEventListener("visibilitychange", onVisibility);
+    const onUnload = () => void save();
+    window.addEventListener("beforeunload", onUnload);
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("beforeunload", onUnload);
+      dispose();
+    };
+  });
 
   async function hide() {
-    await appWindow.hide(); // on masque plutôt que quitter — le compagnon reste en tray
+    pause(); // gèle l'état (sauvegarde incluse) avant de masquer
+    try {
+      const { getCurrentWindow } = await import("@tauri-apps/api/window");
+      await getCurrentWindow().hide();
+    } catch {
+      /* hors Tauri */
+    }
   }
 </script>
 
-<!-- data-tauri-drag-region : toute la scène est déplaçable (fenêtre sans bordure) -->
-<main class="scene" data-tauri-drag-region>
-  <button class="close" onclick={hide} title="Masquer">×</button>
+<main class="room" class:acrylic={game.settings.acrylic} style:opacity={game.settings.opacity}>
+  <!-- Contrôles overlay : réglages + masquer. Discrets, visibles au survol. -->
+  <div class="controls">
+    <button class="ctrl" onclick={() => (showSettings = true)} title="Paramètres">⚙️</button>
+    <button class="ctrl" onclick={hide} title="Masquer">×</button>
+  </div>
 
-  <div class="egg" data-tauri-drag-region></div>
+  {#if game.phase === "choosing"}
+    <EggSelect />
+  {:else if game.phase === "incubating"}
+    <Incubation />
+  {:else if game.phase === "hatching"}
+    <Hatching />
+  {:else}
+    <Creature />
+  {/if}
 
-  <h1>Tamapokon</h1>
-  <p class="tagline">Un compagnon qui respecte ta vie 🌸</p>
+  {#if showSettings}
+    <Settings onclose={() => (showSettings = false)} />
+  {/if}
 </main>
 
 <style>
   :global(html, body) {
     margin: 0;
     height: 100%;
-    background: transparent; /* fenêtre transparente : seul le perso + son décor sont visibles */
+    background: transparent;
     overflow: hidden;
-    image-rendering: pixelated; /* rendu pixel-art : pas de lissage */
-    font-family: "Press Start 2P", "Courier New", monospace;
+    font-family: "Pixelify Sans", "Trebuchet MS", system-ui, sans-serif;
+    font-size: 15px;
+    color: #6b4a59;
     user-select: none;
     cursor: default;
+    -webkit-font-smoothing: none; /* texte plus « pixel », sans anti-aliasing */
+  }
+  /* Le rendu pixelisé s'applique aux sprites. */
+  :global(img),
+  :global(.pixel) {
+    image-rendering: pixelated;
   }
 
-  .scene {
+  .room {
     position: relative;
     height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.6rem;
-    /* petite « pièce » pastel arrondie, le décor par défaut */
     background: linear-gradient(160deg, #fdeef4 0%, #eef3fb 100%);
-    border-radius: 18px;
-    box-shadow: inset 0 0 0 2px #f6d4e4;
+    /* Cadre « pixel » : coins peu arrondis + double bordure nette. */
+    border-radius: 10px;
+    box-shadow:
+      inset 0 0 0 3px #ffffff,
+      inset 0 0 0 6px #f3c2d8;
+    overflow: hidden;
+  }
+  /* Fond acrylique actif : on rend la « pièce » translucide pour laisser voir le flou de l'OS. */
+  .room.acrylic {
+    background: linear-gradient(160deg, rgba(253, 238, 244, 0.3) 0%, rgba(238, 243, 251, 0.3) 100%);
+    box-shadow:
+      inset 0 0 0 3px rgba(255, 255, 255, 0.5),
+      inset 0 0 0 6px rgba(243, 194, 216, 0.6);
   }
 
-  .close {
+  .controls {
     position: absolute;
     top: 8px;
-    right: 10px;
-    width: 22px;
-    height: 22px;
-    border: none;
-    border-radius: 6px;
-    background: #f6d4e4;
-    color: #b06a86;
-    font-size: 14px;
-    line-height: 1;
-    cursor: pointer;
+    right: 8px;
+    display: flex;
+    align-items: flex-start;
+    gap: 5px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 3;
   }
-  .close:hover {
+  .room:hover .controls {
+    opacity: 1;
+  }
+  .ctrl {
+    width: 24px;
+    height: 24px;
+    border: 2px solid #d98fb0;
+    border-radius: 5px;
+    background: #f6d4e4;
+    color: #a85677;
+    font-size: 12px;
+    line-height: 1;
+    padding: 0;
+    cursor: pointer;
+    box-shadow: 2px 2px 0 rgba(176, 106, 134, 0.25);
+  }
+  .ctrl:hover {
     background: #f3c2d8;
   }
-
-  /* Œuf placeholder en CSS (sera remplacé par un sprite pixel-art) */
-  .egg {
-    width: 96px;
-    height: 120px;
-    background: radial-gradient(circle at 38% 32%, #ffffff 0%, #ffd9ea 45%, #f7b8d6 100%);
-    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-    box-shadow: 0 6px 0 rgba(176, 106, 134, 0.15);
-    animation: wobble 3.2s ease-in-out infinite;
-  }
-
-  @keyframes wobble {
-    0%, 100% { transform: rotate(-3deg); }
-    50% { transform: rotate(3deg); }
-  }
-
-  h1 {
-    margin: 0;
-    font-size: 1rem;
-    color: #b06a86;
-    letter-spacing: 1px;
-  }
-
-  .tagline {
-    margin: 0;
-    font-size: 0.5rem;
-    color: #8a93b8;
-    text-align: center;
-    line-height: 1.5;
+  .ctrl:active {
+    box-shadow: none;
+    transform: translate(2px, 2px);
   }
 </style>

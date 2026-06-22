@@ -1,0 +1,305 @@
+// Cœur de jeu réactif (Svelte 5 runes).
+//
+// ⚠️ Principe central : le temps n'avance QUE quand l'app est active (fenêtre visible et
+// non mise en pause). Quand on masque/quitte → plus aucune décroissance. Au retour, on
+// reprend tel quel, sans appliquer le temps écoulé hors-app.
+
+import type { Corner, EggSkin, GameState, Species } from "./types";
+import {
+  ALL_SPECIES,
+  DECAY,
+  INCUBATION_RATE,
+  LONELY_AFTER_MS,
+  TICK_MS,
+  WARMTH_DECAY,
+  stageForLevel,
+  xpForLevel,
+} from "./config";
+import { loadState, saveState } from "./persistence";
+import { cornerPosition, onMoved, setPosition } from "./overlay";
+import { applyAcrylic, applyAlwaysOnTop } from "./effects";
+
+const clamp = (n: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n));
+
+function defaultState(): GameState {
+  return {
+    version: 1,
+    phase: "choosing",
+    eggSkin: null,
+    warmth: 0,
+    incubation: 0,
+    species: null,
+    name: "",
+    stage: "egg",
+    level: 1,
+    xp: 0,
+    stats: { hunger: 80, treat: 60, energy: 90, happiness: 80, cleanliness: 90 },
+    asleep: false,
+    corner: "bottom-right",
+    pos: null,
+    settings: { alwaysOnTop: true, acrylic: false, opacity: 1 },
+    lastActiveAt: Date.now(),
+    lastInteractionAt: Date.now(),
+  };
+}
+
+/** État global réactif. Les composants lisent/écrivent via cet objet. */
+export const game = $state<GameState>(defaultState());
+
+let timer: ReturnType<typeof setInterval> | null = null;
+let paused = false;
+let ticksSinceSave = 0;
+let ready = false;
+let savePosTimer: ReturnType<typeof setTimeout> | null = null;
+let unlistenMoved: (() => void) | null = null;
+
+/** Mémorise la nouvelle position (débounce) → la fenêtre reste où on l'a relâchée. */
+function persistPosition(pos: { x: number; y: number }) {
+  game.pos = pos;
+  if (savePosTimer) clearTimeout(savePosTimer);
+  savePosTimer = setTimeout(() => void save(), 500);
+}
+
+function assign(next: GameState) {
+  Object.assign(game, next);
+  // Au chargement : on IGNORE le temps offline. On se contente de réancrer les timestamps.
+  game.lastActiveAt = Date.now();
+  game.lastInteractionAt = Date.now();
+}
+
+/** À appeler une fois au démarrage de l'app. */
+export async function init(): Promise<void> {
+  if (ready) return;
+  const saved = await loadState();
+  if (saved)
+    assign({
+      ...defaultState(),
+      ...saved,
+      stats: { ...defaultState().stats, ...saved.stats },
+      settings: { ...defaultState().settings, ...saved.settings },
+    });
+  ready = true;
+  // Applique les réglages overlay au démarrage.
+  void applyAlwaysOnTop(game.settings.alwaysOnTop);
+  void applyAcrylic(game.settings.acrylic);
+  // Restaure la position EXACTE mémorisée (ou le coin par défaut au tout premier lancement).
+  const target = game.pos ?? (await cornerPosition(game.corner));
+  if (target) await setPosition(target);
+  // Mémorise toute position où l'utilisateur déplace ensuite la fenêtre.
+  unlistenMoved = await onMoved(persistPosition);
+  start();
+}
+
+function start() {
+  if (timer) return;
+  timer = setInterval(tick, TICK_MS);
+}
+
+/** Pause logique : aucune décroissance (utilisé quand on masque l'overlay). */
+export function pause() {
+  paused = true;
+  game.lastActiveAt = Date.now();
+  void save();
+}
+
+export function resume() {
+  paused = false;
+  game.lastActiveAt = Date.now();
+}
+
+function tick() {
+  // Temps app-actif uniquement : on saute le tick si en pause ou fenêtre masquée/minimisée.
+  if (paused || (typeof document !== "undefined" && document.hidden)) return;
+
+  if (game.phase === "incubating") tickIncubation();
+  else if (game.phase === "alive") tickAlive();
+
+  game.lastActiveAt = Date.now();
+  if (++ticksSinceSave >= 15) {
+    ticksSinceSave = 0;
+    void save();
+  }
+}
+
+function tickIncubation() {
+  game.warmth = clamp(game.warmth - WARMTH_DECAY);
+  // Le soin conditionne l'éclosion : la progression dépend de la chaleur.
+  game.incubation = clamp(game.incubation + INCUBATION_RATE * (game.warmth / 100));
+  if (game.incubation >= 100) hatch();
+}
+
+function tickAlive() {
+  const s = game.stats;
+  s.hunger = clamp(s.hunger - DECAY.hunger);
+  s.treat = clamp(s.treat - DECAY.treat);
+  s.cleanliness = clamp(s.cleanliness - DECAY.cleanliness);
+
+  if (game.asleep) {
+    s.energy = clamp(s.energy + 0.3);
+    if (s.energy >= 100) game.asleep = false; // réveil naturel
+  } else {
+    s.energy = clamp(s.energy - DECAY.energy);
+    if (s.energy <= 0) game.asleep = true; // s'endort tout seul
+  }
+
+  // Bonheur : baisse avec la faim, la saleté et la solitude (en temps app-actif).
+  let dh = 0;
+  if (s.hunger < 20) dh -= 0.1;
+  if (s.cleanliness < 20) dh -= 0.1;
+  if (Date.now() - game.lastInteractionAt > LONELY_AFTER_MS) dh -= 0.05;
+  s.happiness = clamp(s.happiness + dh);
+}
+
+// ---- Progression ----
+
+function grantXp(base: number) {
+  // Une créature heureuse progresse mieux.
+  const factor = 0.5 + game.stats.happiness / 200; // 0.5 → 1.0
+  game.xp += Math.round(base * factor);
+  while (game.xp >= xpForLevel(game.level)) {
+    game.xp -= xpForLevel(game.level);
+    game.level += 1;
+  }
+  game.stage = stageForLevel(game.level);
+}
+
+function touch() {
+  game.lastInteractionAt = Date.now();
+}
+
+// ---- Phase œuf ----
+
+export function chooseEgg(skin: EggSkin) {
+  game.eggSkin = skin;
+  game.phase = "incubating";
+  game.warmth = 60;
+  game.incubation = 0;
+  game.stage = "egg";
+  void save();
+}
+
+/** Réchauffer l'œuf (le garder au chaud). */
+export function warmEgg() {
+  game.warmth = clamp(game.warmth + 25);
+  touch();
+}
+
+/** Câliner l'œuf. */
+export function cuddleEgg() {
+  game.warmth = clamp(game.warmth + 12);
+  game.incubation = clamp(game.incubation + INCUBATION_RATE * 2);
+  touch();
+}
+
+function hatch() {
+  game.species = ALL_SPECIES[Math.floor(Math.random() * ALL_SPECIES.length)] as Species;
+  game.phase = "hatching";
+  void save();
+}
+
+/** Valide l'éclosion : on nomme la créature et la vie commence. */
+export function confirmHatch(name: string) {
+  game.name = name.trim() || "Pokon";
+  game.phase = "alive";
+  game.level = 1;
+  game.xp = 0;
+  game.stage = "baby";
+  game.stats = { hunger: 80, treat: 60, energy: 90, happiness: 90, cleanliness: 100 };
+  game.asleep = false;
+  touch();
+  void save();
+}
+
+// ---- Interactions (phase alive) ----
+
+export function feed() {
+  if (game.asleep) return;
+  game.stats.hunger = clamp(game.stats.hunger + 30);
+  game.stats.happiness = clamp(game.stats.happiness + 5);
+  grantXp(4);
+  touch();
+}
+
+export function giveTreat() {
+  if (game.asleep) return;
+  game.stats.treat = clamp(game.stats.treat + 30);
+  game.stats.happiness = clamp(game.stats.happiness + 8);
+  grantXp(3);
+  touch();
+}
+
+export function play() {
+  if (game.asleep || game.stats.energy < 12) return;
+  game.stats.happiness = clamp(game.stats.happiness + 12);
+  game.stats.energy = clamp(game.stats.energy - 10);
+  game.stats.hunger = clamp(game.stats.hunger - 5);
+  grantXp(8);
+  touch();
+}
+
+export function pet() {
+  if (game.asleep) return;
+  game.stats.happiness = clamp(game.stats.happiness + 6);
+  grantXp(2);
+  touch();
+}
+
+export function wash() {
+  if (game.asleep) return;
+  game.stats.cleanliness = 100;
+  game.stats.happiness = clamp(game.stats.happiness + 4);
+  grantXp(2);
+  touch();
+}
+
+export function toggleSleep() {
+  game.asleep = !game.asleep;
+  touch();
+}
+
+// ---- Overlay ----
+
+/** Raccourci : repositionne l'overlay dans un coin, puis mémorise cette position. */
+export async function setCorner(corner: Corner) {
+  game.corner = corner;
+  const pos = await cornerPosition(corner);
+  if (pos) {
+    await setPosition(pos);
+    game.pos = pos;
+  }
+  await save();
+}
+
+export function setAlwaysOnTop(on: boolean) {
+  game.settings.alwaysOnTop = on;
+  void applyAlwaysOnTop(on);
+  void save();
+}
+
+export function setAcrylic(on: boolean) {
+  game.settings.acrylic = on;
+  void applyAcrylic(on);
+  void save();
+}
+
+/** Opacité globale de l'overlay (clampée 0.3..1). Sauvegarde débouncée (slider). */
+export function setOpacity(value: number) {
+  game.settings.opacity = Math.max(0.3, Math.min(1, value));
+  if (savePosTimer) clearTimeout(savePosTimer);
+  savePosTimer = setTimeout(() => void save(), 400);
+}
+
+/** Nettoyage (retire l'écoute des déplacements). */
+export function dispose() {
+  if (unlistenMoved) unlistenMoved();
+  unlistenMoved = null;
+  if (timer) clearInterval(timer);
+  timer = null;
+}
+
+// ---- Sauvegarde ----
+
+export async function save(): Promise<void> {
+  game.lastActiveAt = Date.now();
+  await saveState($state.snapshot(game));
+}
