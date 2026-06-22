@@ -32,6 +32,10 @@ pnpm tauri dev      # lance l'app en dev
 pnpm tauri build    # build de production (binaire natif de l'OS courant)
 ```
 
+> 🛠 **Mode dev** : en `pnpm tauri dev`, un bouton 🛠 ouvre un panneau de debug
+> (accélérer le temps ×1–100, faire éclore l'œuf, +XP, forcer l'évolution, vider/remplir
+> les jauges, rejouer les animations, réinitialiser). Absent du build de production.
+
 ## Documentation
 
 📄 Spec produit complète : [`docs/Spécification Tamagotchi.md`](docs/Spécification%20Tamagotchi.md)

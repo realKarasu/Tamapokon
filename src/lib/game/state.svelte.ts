@@ -4,7 +4,7 @@
 // non mise en pause). Quand on masque/quitte → plus aucune décroissance. Au retour, on
 // reprend tel quel, sans appliquer le temps écoulé hors-app.
 
-import type { Corner, EggSkin, GameState, Species } from "./types";
+import type { Corner, EggSkin, GameState, Species, Stats } from "./types";
 import {
   ALL_SPECIES,
   DECAY,
@@ -45,6 +45,33 @@ function defaultState(): GameState {
 
 /** État global réactif. Les composants lisent/écrivent via cet objet. */
 export const game = $state<GameState>(defaultState());
+
+/**
+ * Effets visuels transitoires (NON persistés) : déclenchés sur level-up / évolution.
+ * Les composants lisent `fx.levelUp` / `fx.evolve` pour jouer une anim.
+ */
+export const fx = $state<{ levelUp: boolean; evolve: boolean; lastLevel: number }>({
+  levelUp: false,
+  evolve: false,
+  lastLevel: 0,
+});
+
+/** Réglages de debug (build dev uniquement) : accélération du temps. */
+export const dev = $state<{ timeScale: number }>({ timeScale: 1 });
+
+let levelFxTimer: ReturnType<typeof setTimeout> | null = null;
+let evolveFxTimer: ReturnType<typeof setTimeout> | null = null;
+
+function flashLevelUp() {
+  fx.levelUp = true;
+  if (levelFxTimer) clearTimeout(levelFxTimer);
+  levelFxTimer = setTimeout(() => (fx.levelUp = false), 1400);
+}
+function flashEvolve() {
+  fx.evolve = true;
+  if (evolveFxTimer) clearTimeout(evolveFxTimer);
+  evolveFxTimer = setTimeout(() => (fx.evolve = false), 1800);
+}
 
 let timer: ReturnType<typeof setInterval> | null = null;
 let paused = false;
@@ -122,23 +149,25 @@ function tick() {
 }
 
 function tickIncubation() {
-  game.warmth = clamp(game.warmth - WARMTH_DECAY);
+  const k = dev.timeScale; // accélérateur dev (x1 en prod)
+  game.warmth = clamp(game.warmth - WARMTH_DECAY * k);
   // Le soin conditionne l'éclosion : la progression dépend de la chaleur.
-  game.incubation = clamp(game.incubation + INCUBATION_RATE * (game.warmth / 100));
+  game.incubation = clamp(game.incubation + INCUBATION_RATE * (game.warmth / 100) * k);
   if (game.incubation >= 100) hatch();
 }
 
 function tickAlive() {
+  const k = dev.timeScale; // accélérateur dev (x1 en prod)
   const s = game.stats;
-  s.hunger = clamp(s.hunger - DECAY.hunger);
-  s.treat = clamp(s.treat - DECAY.treat);
-  s.cleanliness = clamp(s.cleanliness - DECAY.cleanliness);
+  s.hunger = clamp(s.hunger - DECAY.hunger * k);
+  s.treat = clamp(s.treat - DECAY.treat * k);
+  s.cleanliness = clamp(s.cleanliness - DECAY.cleanliness * k);
 
   if (game.asleep) {
-    s.energy = clamp(s.energy + 0.3);
+    s.energy = clamp(s.energy + 0.3 * k);
     if (s.energy >= 100) game.asleep = false; // réveil naturel
   } else {
-    s.energy = clamp(s.energy - DECAY.energy);
+    s.energy = clamp(s.energy - DECAY.energy * k);
     if (s.energy <= 0) game.asleep = true; // s'endort tout seul
   }
 
@@ -156,11 +185,21 @@ function grantXp(base: number) {
   // Une créature heureuse progresse mieux.
   const factor = 0.5 + game.stats.happiness / 200; // 0.5 → 1.0
   game.xp += Math.round(base * factor);
+  applyLevelUps();
+}
+
+/** Applique les passages de niveau (et déclenche les anims level-up / évolution). */
+function applyLevelUps() {
+  const prevStage = game.stage;
+  let leveled = false;
   while (game.xp >= xpForLevel(game.level)) {
     game.xp -= xpForLevel(game.level);
     game.level += 1;
+    leveled = true;
   }
   game.stage = stageForLevel(game.level);
+  if (leveled) flashLevelUp();
+  if (game.stage !== prevStage) flashEvolve();
 }
 
 function touch() {
@@ -295,6 +334,60 @@ export function dispose() {
   unlistenMoved = null;
   if (timer) clearInterval(timer);
   timer = null;
+}
+
+// ---- Outils DEV (build dev uniquement — voir DevPanel.svelte) ----
+
+/** Multiplicateur de vitesse du temps (x1 = normal). Clampé 1..200. */
+export function setTimeScale(value: number) {
+  dev.timeScale = Math.max(1, Math.min(200, Math.round(value)));
+}
+
+/** Fait éclore l'œuf immédiatement (si en incubation). */
+export function devSkipIncubation() {
+  if (game.phase !== "incubating") return;
+  game.incubation = 100;
+  hatch();
+}
+
+/** Ajoute de l'XP (déclenche level-up / évolution si seuils franchis). */
+export function devAddXp(amount: number) {
+  if (game.phase !== "alive") return;
+  game.xp += amount;
+  applyLevelUps();
+  void save();
+}
+
+/** Saute directement à l'étape d'évolution suivante. */
+export function devEvolveNext() {
+  if (game.phase !== "alive") return;
+  const next = [5, 10, 18].find((l) => l > game.level);
+  if (!next) return;
+  game.level = next;
+  game.xp = 0;
+  applyLevelUps();
+  void save();
+}
+
+/** Force la valeur d'une jauge (0..100). */
+export function devSetStat(key: keyof Stats, value: number) {
+  game.stats[key] = clamp(value);
+}
+
+/** Rejoue une animation isolément (sans changer l'état) pour la tester. */
+export function devPreviewLevelUp() {
+  flashLevelUp();
+}
+export function devPreviewEvolve() {
+  flashEvolve();
+}
+
+/** Repart de zéro (nouvel œuf) en conservant les préférences d'overlay. */
+export function resetGame() {
+  const keep = { corner: game.corner, pos: game.pos, settings: { ...game.settings } };
+  assign({ ...defaultState(), ...keep });
+  dev.timeScale = 1;
+  void save();
 }
 
 // ---- Sauvegarde ----

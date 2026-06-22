@@ -9,8 +9,11 @@
   import Hatching from "$lib/components/Hatching.svelte";
   import Creature from "$lib/components/Creature.svelte";
   import Settings from "$lib/components/Settings.svelte";
+  import DevPanel from "$lib/components/DevPanel.svelte";
 
+  const isDev = import.meta.env.DEV;
   let showSettings = $state(false);
+  let showDev = $state(false);
 
   onMount(() => {
     void init();
@@ -42,6 +45,9 @@
 <main class="room" class:acrylic={game.settings.acrylic} style:opacity={game.settings.opacity}>
   <!-- Contrôles overlay : réglages + masquer. Discrets, visibles au survol. -->
   <div class="controls">
+    {#if isDev}
+      <button class="ctrl dev" onclick={() => (showDev = true)} title="Dev">🛠</button>
+    {/if}
     <button class="ctrl" onclick={() => (showSettings = true)} title="Paramètres">⚙️</button>
     <button class="ctrl" onclick={hide} title="Masquer">×</button>
   </div>
@@ -58,6 +64,10 @@
 
   {#if showSettings}
     <Settings onclose={() => (showSettings = false)} />
+  {/if}
+
+  {#if isDev && showDev}
+    <DevPanel onclose={() => (showDev = false)} />
   {/if}
 </main>
 
@@ -132,5 +142,14 @@
   .ctrl:active {
     box-shadow: none;
     transform: translate(2px, 2px);
+  }
+  .ctrl.dev {
+    border-color: #8fa3d9;
+    background: #dde6fb;
+    color: #4d63a6;
+    box-shadow: 2px 2px 0 rgba(77, 99, 166, 0.25);
+  }
+  .ctrl.dev:hover {
+    background: #cdd9f6;
   }
 </style>

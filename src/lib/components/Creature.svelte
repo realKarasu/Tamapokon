@@ -2,6 +2,7 @@
   import { SPECIES, xpForLevel } from "$lib/game/config";
   import {
     game,
+    fx,
     feed,
     giveTreat,
     play,
@@ -34,16 +35,31 @@
   </div>
 
   <!-- La créature : clic = câlin. Déplaçable en glissant. -->
-  <button
-    class="creature"
-    class:asleep={game.asleep}
-    style:background={`radial-gradient(circle at 40% 35%, #fff 0%, ${info.color} 62%)`}
-    onclick={pet}
-    data-tauri-drag-region
-    title="Câliner"
-  >
-    <span class="face">{game.asleep ? "💤" : mood.face}</span>
-  </button>
+  <div class="stage">
+    {#if fx.evolve}<div class="evolve-glow"></div>{/if}
+    {#if fx.levelUp}
+      <div class="confetti">
+        {#each ["🎉", "✨", "⭐", "🎊", "💫"] as c, i (i)}
+          <span style:--i={i}>{c}</span>
+        {/each}
+      </div>
+    {/if}
+    <button
+      class="creature"
+      class:asleep={game.asleep}
+      class:levelup={fx.levelUp}
+      class:evolve={fx.evolve}
+      style:background={`radial-gradient(circle at 40% 35%, #fff 0%, ${info.color} 62%)`}
+      onclick={pet}
+      data-tauri-drag-region
+      title="Câliner"
+    >
+      <span class="face">{game.asleep ? "💤" : mood.face}</span>
+    </button>
+  </div>
+
+  {#if fx.levelUp}<div class="banner">✨ Niveau {game.level} !</div>{/if}
+  {#if fx.evolve}<div class="banner evo">🌟 Évolution !</div>{/if}
 
   <p class="name">{game.name}</p>
   <p class="mood">{mood.label}</p>
@@ -69,6 +85,7 @@
 
 <style>
   .screen {
+    position: relative;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -127,6 +144,91 @@
   @keyframes bob {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-5px); }
+  }
+
+  /* --- Animations level-up / évolution --- */
+  .stage {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .creature.levelup {
+    animation: bob 2.8s ease-in-out infinite, flash 0.4s ease 2;
+  }
+  .creature.evolve {
+    animation: bob 2.8s ease-in-out infinite, evolvePulse 0.6s ease-in-out 3;
+  }
+  @keyframes flash {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.9); }
+  }
+  @keyframes evolvePulse {
+    0%, 100% { transform: scale(1); filter: brightness(1); }
+    50% { transform: scale(1.18); filter: brightness(2.2) saturate(1.4); }
+  }
+  .evolve-glow {
+    position: absolute;
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 244, 180, 0.9) 0%, rgba(255, 214, 240, 0) 70%);
+    animation: glowPulse 0.6s ease-in-out 3;
+    pointer-events: none;
+  }
+  @keyframes glowPulse {
+    0%, 100% { transform: scale(0.7); opacity: 0.3; }
+    50% { transform: scale(1.2); opacity: 1; }
+  }
+  .confetti {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .confetti span {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    font-size: 16px;
+    animation: pop-out 1.2s ease-out forwards;
+    animation-delay: calc(var(--i) * 0.05s);
+  }
+  .confetti span:nth-child(1) { --dx: -60px; --dy: -50px; }
+  .confetti span:nth-child(2) { --dx: 55px; --dy: -45px; }
+  .confetti span:nth-child(3) { --dx: -45px; --dy: 45px; }
+  .confetti span:nth-child(4) { --dx: 60px; --dy: 40px; }
+  .confetti span:nth-child(5) { --dx: 0px; --dy: -65px; }
+  @keyframes pop-out {
+    0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; }
+    30% { opacity: 1; }
+    100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1); opacity: 0; }
+  }
+  .banner {
+    position: absolute;
+    top: 26px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #fff3c4;
+    border: 2px solid #e8c45a;
+    border-radius: 6px;
+    padding: 4px 9px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #a8791f;
+    white-space: nowrap;
+    box-shadow: 2px 2px 0 rgba(168, 121, 31, 0.25);
+    animation: drop-in 0.3s ease;
+    z-index: 4;
+  }
+  .banner.evo {
+    background: #ffe3f3;
+    border-color: #e98fc0;
+    color: #a8417f;
+    box-shadow: 2px 2px 0 rgba(168, 65, 127, 0.25);
+  }
+  @keyframes drop-in {
+    0% { transform: translate(-50%, -8px); opacity: 0; }
+    100% { transform: translate(-50%, 0); opacity: 1; }
   }
 
   .name {
