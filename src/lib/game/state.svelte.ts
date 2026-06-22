@@ -321,9 +321,9 @@ export function setAcrylic(on: boolean) {
   void save();
 }
 
-/** Opacité globale de l'overlay (clampée 0.3..1). Sauvegarde débouncée (slider). */
+/** Opacité du FOND uniquement (0 = fond transparent, 1 = opaque). Sauvegarde débouncée. */
 export function setOpacity(value: number) {
-  game.settings.opacity = Math.max(0.3, Math.min(1, value));
+  game.settings.opacity = Math.max(0, Math.min(1, value));
   if (savePosTimer) clearTimeout(savePosTimer);
   savePosTimer = setTimeout(() => void save(), 400);
 }

@@ -30,11 +30,11 @@
   </label>
 
   <label class="row col">
-    <span>Transparence <b>{Math.round(game.settings.opacity * 100)}%</b></span>
+    <span>Opacité du fond <b>{Math.round(game.settings.opacity * 100)}%</b></span>
     <input
       class="slider"
       type="range"
-      min="0.3"
+      min="0"
       max="1"
       step="0.05"
       value={game.settings.opacity}

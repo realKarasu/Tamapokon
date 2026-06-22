@@ -42,7 +42,7 @@
   }
 </script>
 
-<main class="room" class:acrylic={game.settings.acrylic} style:opacity={game.settings.opacity}>
+<main class="room" class:acrylic={game.settings.acrylic} style:--bg-alpha={game.settings.opacity}>
   <!-- Contrôles overlay : réglages + masquer. Discrets, visibles au survol. -->
   <div class="controls">
     {#if isDev}
@@ -91,22 +91,29 @@
   }
 
   .room {
+    --bg-alpha: 1; /* piloté par le slider de transparence (alpha du FOND uniquement) */
     position: relative;
     height: 100vh;
-    background: linear-gradient(160deg, #fdeef4 0%, #eef3fb 100%);
-    /* Cadre « pixel » : coins peu arrondis + double bordure nette. */
+    /* Seul le fond utilise l'alpha → la créature et l'UI restent pleinement visibles. */
+    background: linear-gradient(
+      160deg,
+      rgb(253 238 244 / var(--bg-alpha)) 0%,
+      rgb(238 243 251 / var(--bg-alpha)) 100%
+    );
+    /* Cadre « pixel » : coins peu arrondis + double bordure nette (alpha suit le fond). */
     border-radius: 10px;
     box-shadow:
-      inset 0 0 0 3px #ffffff,
-      inset 0 0 0 6px #f3c2d8;
+      inset 0 0 0 3px rgb(255 255 255 / var(--bg-alpha)),
+      inset 0 0 0 6px rgb(243 194 216 / var(--bg-alpha));
     overflow: hidden;
   }
-  /* Fond acrylique actif : on rend la « pièce » translucide pour laisser voir le flou de l'OS. */
+  /* Fond acrylique actif : tint translucide par-dessus le flou de l'OS (×0.4 de l'alpha choisi). */
   .room.acrylic {
-    background: linear-gradient(160deg, rgba(253, 238, 244, 0.3) 0%, rgba(238, 243, 251, 0.3) 100%);
-    box-shadow:
-      inset 0 0 0 3px rgba(255, 255, 255, 0.5),
-      inset 0 0 0 6px rgba(243, 194, 216, 0.6);
+    background: linear-gradient(
+      160deg,
+      rgb(253 238 244 / calc(var(--bg-alpha) * 0.4)) 0%,
+      rgb(238 243 251 / calc(var(--bg-alpha) * 0.4)) 100%
+    );
   }
 
   .controls {
