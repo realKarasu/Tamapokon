@@ -1,9 +1,15 @@
 # Dependencies
 node_modules/
-dist/
-build/
 
-# Tauri
+# SvelteKit / Vite
+/build/
+/.svelte-kit/
+/package/
+dist/
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# Tauri / Rust
 src-tauri/target/
 
 # OS
@@ -16,5 +22,6 @@ Thumbs.db
 
 # Env
 .env
-.env.local
+.env.*
+!.env.example
 *.log

@@ -1,6 +1,6 @@
-# Tamapokone 🥚
+# Tamapokon 🥚
 
-Un compagnon de bureau **macOS** : une petite fenêtre flottante, toujours ouverte, dans laquelle vit une créature mignonne en **pixel-art pastel** dont on s'occupe au fil de la journée — on la nourrit, on joue avec, on la fait évoluer et monter de niveau.
+Un compagnon de bureau **multi-plateforme (Windows · macOS · Linux)** : une petite fenêtre flottante, toujours ouverte, dans laquelle vit une créature mignonne en **pixel-art pastel** dont on s'occupe au fil de la journée — on la nourrit, on joue avec, on la fait évoluer et monter de niveau.
 
 ## Principe central
 
@@ -18,10 +18,19 @@ Un compagnon de bureau **macOS** : une petite fenêtre flottante, toujours ouver
 - XP, niveaux, **évolution en 5 étapes** (œuf → bébé → enfant → ado → adulte), boutique, déco, mini-jeux.
 - (v2/v3) Album photo, succès, réaction à l'activité du Mac, formes rares.
 
-## Stack envisagée
+## Stack
 
-Tauri + Svelte (fenêtre native légère, frameless, always-on-top, transparente).
+**Tauri 2 + Svelte 5 + TypeScript + Vite** — fenêtre native légère, frameless, always-on-top, transparente.
+Cross-platform : **Windows, macOS, Linux** (un seul code base).
 Persistance via fichier local (JSON/SQLite) avec timestamp pour la pause hors-app.
+
+## Démarrage
+
+```bash
+pnpm install
+pnpm tauri dev      # lance l'app en dev
+pnpm tauri build    # build de production (binaire natif de l'OS courant)
+```
 
 ## Documentation
 

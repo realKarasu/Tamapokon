@@ -1,7 +1,7 @@
-# Tamapokone — Spec produit (compagnon de bureau macOS)
+# Tamapokon — Spec produit (compagnon de bureau multi-plateforme : Windows · macOS · Linux)
 
 ## Le concept en une phrase
-**Tamapokone** : une petite fenêtre toujours ouverte sur le Mac, dans laquelle vit une créature mignonne dont je m'occupe au fil de la journée — je la nourris, je joue avec, je la fais évoluer et monter de niveau.
+**Tamapokon** : une petite fenêtre toujours ouverte sur le Mac, dans laquelle vit une créature mignonne dont je m'occupe au fil de la journée — je la nourris, je joue avec, je la fais évoluer et monter de niveau.
 
 ---
 
@@ -45,7 +45,7 @@ L'aventure commence par un **œuf**, pas par une créature visible.
 
 À l'éclosion, l'œuf révèle **une** de ces 4 espèces, tirée au hasard. Toutes sont mignonnes, un peu fantastiques, en pixel-art pastel. Chacune a son **caractère**, son **plat préféré** et sa **forme rare** (selon le style d'élevage).
 
-> Note : on pourrait appeler les créatures des **« pokones »** (clin d'œil au nom Tamapokone) — à valider.
+> Note : on pourrait appeler les créatures des **« pokones »** (clin d'œil au nom Tamapokon) — à valider.
 
 ### 1. 🌸 Mochi — la boule de guimauve
 - **Look** : boule toute ronde rose pastel, grosses joues, mini-pattes, un petit toupet.
@@ -337,8 +337,9 @@ Les **transitions** sont mises en scène, pas instantanées :
 
 ## Notes techniques (pour le dev)
 
-- **Plateforme** : macOS. Fenêtre frameless, always-on-top, transparente, draggable, + item barre de menu.
-- **Stack suggérée** (au choix) : **Tauri + Svelte** (léger, fenêtre native facile, et c'est ta stack), ou Electron si tu veux aller vite, ou Swift natif pour le plus propre.
+- **Plateforme** : multi-plateforme **Windows · macOS · Linux** (un seul code base). Fenêtre frameless, always-on-top, transparente, draggable, + icône **system tray** (barre de menu macOS / zone de notification Windows / tray Linux).
+- **Stack retenue** : **Tauri 2 + Svelte 5 + TypeScript + Vite** (léger, fenêtre native facile, binaires natifs par OS).
+- **Portabilité OS** : privilégier les API Tauri cross-platform. Les fonctions spécifiques OS (tray, détection de l'app au premier plan, « now playing », always-on-top) doivent avoir une implémentation par plateforme **ou** un fallback neutre si l'OS n'est pas supporté.
 - **Persistance** : un simple fichier local (JSON ou SQLite) avec l'état + timestamp.
 - **Boucle de jeu** : un tick (genre toutes les quelques secondes/minutes) qui ne décrémente les stats **que lorsque l'app est active**. Au lancement, on lit le timestamp et on **n'applique pas** le temps écoulé hors-app. **L'incubation de l'œuf suit la même règle** (progresse en temps actif uniquement).
 - **Rendu pixel-art** : afficher les sprites en `image-rendering: pixelated` (pas de lissage), assets en sprite sheets, palette pastel partagée.
@@ -378,7 +379,7 @@ Les **transitions** sont mises en scène, pas instantanées :
 ---
 
 ## Décisions prises
-- **Nom** : Tamapokone.
+- **Nom** : Tamapokon.
 - **Œuf** : 4 œufs au choix, apparence purement cosmétique, **aucun indice** sur la créature ; créature **aléatoire**.
 - **Incubation** : **~30 h en temps app-actif** ; le **soin conditionne l'éclosion** (négligé = n'éclot pas / plus lent).
 - **Créatures** : 4 espèces (Mochi, Braisille, Axolo, Sylphe), une seule à la fois pour l'instant.
