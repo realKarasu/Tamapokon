@@ -44,19 +44,26 @@ export function stageForLevel(level: number): Stage {
 interface SpeciesInfo {
   label: string;
   emoji: string;
-  /** Couleur pastel dominante (placeholder en attendant les sprites pixel-art). */
+  /** Couleur pastel dominante (halo/accent derrière le sprite). */
   color: string;
   favorite: string;
+  /** Sprite pixel-art (généré via PixelLab), servi depuis static/. */
+  sprite: string;
 }
 
 export const SPECIES: Record<Species, SpeciesInfo> = {
-  mochi: { label: "Mochi", emoji: "🌸", color: "#ffc9de", favorite: "dango" },
-  braisille: { label: "Braisille", emoji: "🔥", color: "#ffcaa8", favorite: "baies épicées" },
-  axolo: { label: "Axolo", emoji: "💧", color: "#b6ead9", favorite: "gelée d'algue" },
-  sylphe: { label: "Sylphe", emoji: "🌿", color: "#d9d2f5", favorite: "baies sucrées" },
+  mochi: { label: "Mochi", emoji: "🌸", color: "#ffc9de", favorite: "dango", sprite: "/sprites/creatures/mochi.png" },
+  braisille: { label: "Braisille", emoji: "🔥", color: "#ffcaa8", favorite: "baies épicées", sprite: "/sprites/creatures/braisille.png" },
+  axolo: { label: "Axolo", emoji: "💧", color: "#b6ead9", favorite: "gelée d'algue", sprite: "/sprites/creatures/axolo.png" },
+  sylphe: { label: "Sylphe", emoji: "🌿", color: "#d9d2f5", favorite: "baies sucrées", sprite: "/sprites/creatures/sylphe.png" },
 };
 
 export const ALL_SPECIES: Species[] = ["mochi", "braisille", "axolo", "sylphe"];
 
 /** Teintes pastel des 4 œufs (cosmétique). */
 export const EGG_COLORS = ["#f7b8d6", "#bfe0f7", "#c3eccb", "#e6cdf2"] as const;
+
+/** Sprite d'œuf (pixel-art) pour une apparence donnée. */
+export function eggSprite(skin: number): string {
+  return `/sprites/eggs/egg-${skin}.png`;
+}

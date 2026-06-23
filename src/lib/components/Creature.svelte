@@ -49,12 +49,13 @@
       class:asleep={game.asleep}
       class:levelup={fx.levelUp}
       class:evolve={fx.evolve}
-      style:background={`radial-gradient(circle at 40% 35%, #fff 0%, ${info.color} 62%)`}
+      style:--halo={info.color}
       onclick={pet}
       data-tauri-drag-region
       title="Câliner"
     >
-      <span class="face">{game.asleep ? "💤" : mood.face}</span>
+      <img class="sprite pixel" src={info.sprite} alt={info.label} />
+      <span class="mood-bubble">{game.asleep ? "💤" : mood.face}</span>
     </button>
   </div>
 
@@ -124,22 +125,34 @@
   }
 
   .creature {
-    width: 92px;
-    height: 92px;
-    border: 3px solid #e29cbb;
-    border-radius: 30% 30% 36% 36%; /* forme blob un peu « blocky » */
+    position: relative;
+    width: 96px;
+    height: 96px;
+    border: none;
+    background: radial-gradient(circle at 50% 58%, var(--halo, #ffd9ea) 0%, transparent 66%);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: 4px 4px 0 rgba(176, 106, 134, 0.18);
     animation: bob 2.8s ease-in-out infinite;
   }
   .creature.asleep {
     animation-duration: 5.5s;
   }
-  .face {
-    font-size: 38px;
+  .creature.asleep .sprite {
+    filter: brightness(0.92) saturate(0.85);
+  }
+  .sprite {
+    width: 92px;
+    height: 92px;
+    object-fit: contain;
+  }
+  .mood-bubble {
+    position: absolute;
+    top: 2px;
+    right: 6px;
+    font-size: 18px;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.15));
   }
   @keyframes bob {
     0%, 100% { transform: translateY(0); }

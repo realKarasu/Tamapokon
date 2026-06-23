@@ -1,19 +1,14 @@
 <script lang="ts">
-  import { EGG_COLORS } from "$lib/game/config";
+  import { eggSprite } from "$lib/game/config";
   import { game, warmEgg, cuddleEgg } from "$lib/game/state.svelte";
 
-  const color = $derived(EGG_COLORS[game.eggSkin ?? 0]);
+  const sprite = $derived(eggSprite(game.eggSkin ?? 0));
   // Plus la chaleur est basse, plus l'œuf paraît terne (le soin conditionne l'éclosion).
   const cold = $derived(game.warmth < 35);
 </script>
 
 <div class="screen" data-tauri-drag-region>
-  <span
-    class="egg"
-    class:cold
-    style:background={`radial-gradient(circle at 38% 32%, #fff 0%, ${color} 55%, ${color} 100%)`}
-    data-tauri-drag-region
-  ></span>
+  <img class="egg pixel" class:cold src={sprite} alt="Œuf en incubation" data-tauri-drag-region />
 
   <div class="bars">
     <div class="row"><span>🥚</span><div class="track"><div class="fill inc" style:width={`${game.incubation}%`}></div></div></div>
@@ -38,11 +33,9 @@
     gap: 8px;
   }
   .egg {
-    width: 84px;
-    height: 104px;
-    border: 3px solid #e29cbb;
-    border-radius: 46% 46% 42% 42% / 56% 56% 44% 44%;
-    box-shadow: 4px 4px 0 rgba(176, 106, 134, 0.18);
+    width: 92px;
+    height: 92px;
+    object-fit: contain;
     animation: wobble 2.6s ease-in-out infinite;
   }
   .egg.cold {

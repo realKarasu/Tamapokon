@@ -15,8 +15,8 @@
   <p class="title">✨ Ça éclot ! ✨</p>
 
   {#if info}
-    <span class="creature" style:background={`radial-gradient(circle at 40% 35%, #fff 0%, ${info.color} 60%)`}>
-      {info.emoji}
+    <span class="creature" style:--halo={info.color}>
+      <img class="pixel" src={info.sprite} alt={info.label} />
     </span>
     <p class="species">C'est un <b>{info.label}</b> !</p>
   {/if}
@@ -43,16 +43,19 @@
     color: #a85677;
   }
   .creature {
-    width: 80px;
-    height: 80px;
-    border: 3px solid #e29cbb;
-    border-radius: 32% 32% 38% 38%;
+    width: 92px;
+    height: 92px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 32px;
-    box-shadow: 0 4px 0 rgba(176, 106, 134, 0.18);
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--halo, #ffd9ea) 0%, transparent 68%);
     animation: pop 0.5s ease;
+  }
+  .creature img {
+    width: 88px;
+    height: 88px;
+    object-fit: contain;
   }
   @keyframes pop {
     0% { transform: scale(0.3); opacity: 0; }
