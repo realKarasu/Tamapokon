@@ -3,17 +3,17 @@
   import "@fontsource/pixelify-sans/400.css";
   import "@fontsource/pixelify-sans/600.css";
   import "@fontsource/pixelify-sans/700.css";
-  import { game, init, pause, resume, save, dispose } from "$lib/game/state.svelte";
+  import { game, init, pause, resume, save, dispose, applyDevAction } from "$lib/game/state.svelte";
+  import { listenDevActions } from "$lib/game/devbridge";
+  import { openDevWindow } from "$lib/game/devwindow";
   import EggSelect from "$lib/components/EggSelect.svelte";
   import Incubation from "$lib/components/Incubation.svelte";
   import Hatching from "$lib/components/Hatching.svelte";
   import Creature from "$lib/components/Creature.svelte";
   import Settings from "$lib/components/Settings.svelte";
-  import DevPanel from "$lib/components/DevPanel.svelte";
 
   const isDev = import.meta.env.DEV;
   let showSettings = $state(false);
-  let showDev = $state(false);
 
   onMount(() => {
     void init();
@@ -24,9 +24,14 @@
     const onUnload = () => void save();
     window.addEventListener("beforeunload", onUnload);
 
+    // Écoute les actions émises par la fenêtre dev séparée.
+    let unlistenDev: (() => void) | null = null;
+    if (isDev) void listenDevActions(applyDevAction).then((u) => (unlistenDev = u));
+
     return () => {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("beforeunload", onUnload);
+      unlistenDev?.();
       dispose();
     };
   });
@@ -46,7 +51,7 @@
   <!-- Contrôles overlay : réglages + masquer. Discrets, visibles au survol. -->
   <div class="controls">
     {#if isDev}
-      <button class="ctrl dev" onclick={() => (showDev = true)} title="Dev">🛠</button>
+      <button class="ctrl dev" onclick={openDevWindow} title="Ouvrir la fenêtre dev">🛠</button>
     {/if}
     <button class="ctrl" onclick={() => (showSettings = true)} title="Paramètres">⚙️</button>
     <button class="ctrl" onclick={hide} title="Masquer">×</button>
@@ -64,10 +69,6 @@
 
   {#if showSettings}
     <Settings onclose={() => (showSettings = false)} />
-  {/if}
-
-  {#if isDev && showDev}
-    <DevPanel onclose={() => (showDev = false)} />
   {/if}
 </main>
 

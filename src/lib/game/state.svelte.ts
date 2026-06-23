@@ -5,6 +5,7 @@
 // reprend tel quel, sans appliquer le temps écoulé hors-app.
 
 import type { Corner, EggSkin, GameState, Species, Stats } from "./types";
+import type { DevAction } from "./devbridge";
 import {
   ALL_SPECIES,
   DECAY,
@@ -380,6 +381,53 @@ export function devPreviewLevelUp() {
 }
 export function devPreviewEvolve() {
   flashEvolve();
+}
+
+/** Vide les jauges pour tester les humeurs (faim, grognon, fatigué, sale). */
+export function devDrain() {
+  devSetStat("hunger", 15);
+  devSetStat("energy", 15);
+  devSetStat("cleanliness", 15);
+  devSetStat("happiness", 20);
+}
+/** Remplit toutes les jauges. */
+export function devFill() {
+  (["hunger", "treat", "energy", "happiness", "cleanliness"] as (keyof Stats)[]).forEach((k) =>
+    devSetStat(k, 100),
+  );
+}
+
+/** Applique une action reçue de la fenêtre dev (voir devbridge.ts). */
+export function applyDevAction(a: DevAction) {
+  switch (a.type) {
+    case "timeScale":
+      setTimeScale(a.value);
+      break;
+    case "skipIncubation":
+      devSkipIncubation();
+      break;
+    case "addXp":
+      devAddXp(a.value);
+      break;
+    case "evolveNext":
+      devEvolveNext();
+      break;
+    case "drain":
+      devDrain();
+      break;
+    case "fill":
+      devFill();
+      break;
+    case "previewLevelUp":
+      devPreviewLevelUp();
+      break;
+    case "previewEvolve":
+      devPreviewEvolve();
+      break;
+    case "reset":
+      resetGame();
+      break;
+  }
 }
 
 /** Repart de zéro (nouvel œuf) en conservant les préférences d'overlay. */
