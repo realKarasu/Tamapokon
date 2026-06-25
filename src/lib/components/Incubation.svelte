@@ -1,25 +1,26 @@
 <script lang="ts">
-  import { eggSprite } from "$lib/game/config";
+  import { eggSprite, eggTint } from "$lib/game/config";
   import { game, warmEgg, cuddleEgg } from "$lib/game/state.svelte";
+  import Icon from "./Icon.svelte";
 
-  const sprite = $derived(eggSprite(game.eggSkin ?? 0));
-  // Plus la chaleur est basse, plus l'œuf paraît terne (le soin conditionne l'éclosion).
+  const sprite = $derived(eggSprite());
+  const tint = $derived(eggTint(game.eggSkin ?? 0));
   const cold = $derived(game.warmth < 35);
 </script>
 
 <div class="screen" data-tauri-drag-region>
-  <img class="egg pixel" class:cold src={sprite} alt="Œuf en incubation" data-tauri-drag-region />
+  <img class="egg pixel" class:cold src={sprite} alt="Œuf en incubation" style:filter={tint} data-tauri-drag-region />
 
   <div class="bars">
-    <div class="row"><span>🥚</span><div class="track"><div class="fill inc" style:width={`${game.incubation}%`}></div></div></div>
-    <div class="row"><span>🔥</span><div class="track"><div class="fill warm" style:width={`${game.warmth}%`}></div></div></div>
+    <div class="row"><Icon name="egg-mini" fallback="🥚" size={14} /><div class="track"><div class="fill inc" style:width={`${game.incubation}%`}></div></div></div>
+    <div class="row"><Icon name="fire" fallback="🔥" size={14} /><div class="track"><div class="fill warm" style:width={`${game.warmth}%`}></div></div></div>
   </div>
 
-  {#if cold}<p class="warn">L'œuf a froid… réchauffe-le 🥶</p>{/if}
+  {#if cold}<p class="warn">L'œuf a froid… réchauffe-le <Icon name="snowflake" fallback="🥶" size={13} /></p>{/if}
 
   <div class="actions">
-    <button onclick={warmEgg}>🔥 Réchauffer</button>
-    <button onclick={cuddleEgg}>🤍 Câliner</button>
+    <button onclick={warmEgg}><Icon name="fire" fallback="🔥" size={14} /> Réchauffer</button>
+    <button onclick={cuddleEgg}><Icon name="heart" fallback="🤍" size={14} /> Câliner</button>
   </div>
 </div>
 

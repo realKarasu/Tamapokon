@@ -6,6 +6,7 @@
   import { game, init, pause, resume, save, dispose, applyDevAction } from "$lib/game/state.svelte";
   import { listenDevActions } from "$lib/game/devbridge";
   import { openDevWindow } from "$lib/game/devwindow";
+  import Icon from "$lib/components/Icon.svelte";
   import EggSelect from "$lib/components/EggSelect.svelte";
   import Incubation from "$lib/components/Incubation.svelte";
   import Hatching from "$lib/components/Hatching.svelte";
@@ -53,7 +54,7 @@
     {#if isDev}
       <button class="ctrl dev" onclick={openDevWindow} title="Ouvrir la fenêtre dev">🛠</button>
     {/if}
-    <button class="ctrl" onclick={() => (showSettings = true)} title="Paramètres">⚙️</button>
+    <button class="ctrl" onclick={() => (showSettings = true)} title="Paramètres"><Icon name="gear" fallback="⚙️" size={12} /></button>
     <button class="ctrl" onclick={hide} title="Masquer">×</button>
   </div>
 

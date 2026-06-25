@@ -1,13 +1,14 @@
 <script lang="ts">
   import { game, setAlwaysOnTop, setAcrylic, setOpacity } from "$lib/game/state.svelte";
   import CornerPicker from "./CornerPicker.svelte";
+  import Icon from "./Icon.svelte";
 
   let { onclose }: { onclose: () => void } = $props();
 </script>
 
 <div class="settings" data-tauri-drag-region>
   <div class="head">
-    <span class="title">⚙️ Paramètres</span>
+    <span class="title"><Icon name="gear" fallback="⚙️" size={15} /> Paramètres</span>
     <button class="close" onclick={onclose} title="Fermer">×</button>
   </div>
 
