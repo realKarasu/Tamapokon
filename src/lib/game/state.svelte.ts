@@ -4,10 +4,10 @@
 // non mise en pause). Quand on masque/quitte → plus aucune décroissance. Au retour, on
 // reprend tel quel, sans appliquer le temps écoulé hors-app.
 
-import type { Corner, EggSkin, GameState, Species, Stats } from "./types";
+import type { ColorMorph, Corner, EggSkin, GameState, Stats } from "./types";
 import type { DevAction } from "./devbridge";
 import {
-  ALL_SPECIES,
+  ALL_MORPHS,
   DECAY,
   INCUBATION_RATE,
   LONELY_AFTER_MS,
@@ -24,12 +24,12 @@ const clamp = (n: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n));
 
 function defaultState(): GameState {
   return {
-    version: 1,
+    version: 2,
     phase: "choosing",
     eggSkin: null,
     warmth: 0,
     incubation: 0,
-    species: null,
+    colorMorph: null,
     name: "",
     stage: "egg",
     level: 1,
@@ -95,6 +95,15 @@ function assign(next: GameState) {
   game.lastInteractionAt = Date.now();
 }
 
+/** Met à niveau une sauvegarde ancienne (v1 : champ `species`) vers le schéma courant. */
+function migrate(saved: Record<string, unknown>): Partial<GameState> {
+  const next = { ...saved } as Record<string, unknown>;
+  if ("species" in next) delete next.species; // l'espèce n'existe plus
+  if (next.colorMorph == null) next.colorMorph = "ginger"; // variante par défaut
+  next.version = 2;
+  return next as Partial<GameState>;
+}
+
 /** À appeler une fois au démarrage de l'app. */
 export async function init(): Promise<void> {
   if (ready) return;
@@ -102,7 +111,7 @@ export async function init(): Promise<void> {
   if (saved)
     assign({
       ...defaultState(),
-      ...saved,
+      ...migrate(saved as unknown as Record<string, unknown>),
       stats: { ...defaultState().stats, ...saved.stats },
       settings: { ...defaultState().settings, ...saved.settings },
     });
@@ -232,7 +241,7 @@ export function cuddleEgg() {
 }
 
 function hatch() {
-  game.species = ALL_SPECIES[Math.floor(Math.random() * ALL_SPECIES.length)] as Species;
+  game.colorMorph = ALL_MORPHS[Math.floor(Math.random() * ALL_MORPHS.length)] as ColorMorph;
   game.phase = "hatching";
   void save();
 }

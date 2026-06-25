@@ -1,7 +1,7 @@
 // Paramètres d'équilibrage — pensés « doux » : on doit pouvoir ignorer la créature
 // 1–2 h sans drame (cf. spec). Tout est en TEMPS APP-ACTIF (ticks), jamais en temps calendaire.
 
-import type { Species, Stage } from "./types";
+import type { ColorMorph, Stage } from "./types";
 
 /** Un tick toutes les 4 s, uniquement quand l'app est active (fenêtre visible). */
 export const TICK_MS = 4000;
@@ -41,31 +41,53 @@ export function stageForLevel(level: number): Stage {
   return "baby";
 }
 
-interface SpeciesInfo {
-  label: string;
-  emoji: string;
-  /** Couleur pastel dominante (halo/accent derrière le sprite). */
-  color: string;
-  favorite: string;
-  /** Sprite pixel-art (généré via PixelLab), servi depuis static/. */
-  sprite: string;
+/** La créature unique du jeu (le joueur la renomme ; défaut « Pokon »). */
+export const CREATURE = {
+  label: "Requinou",
+  favorite: "petits poissons",
+  /** Halo pastel derrière le sprite. */
+  color: "#bfe6ff",
+} as const;
+
+/** Sprite pixel-art par étape d'évolution (l'œuf réutilise le sprite « baby »). */
+export const STAGE_SPRITES: Record<Exclude<Stage, "egg">, string> = {
+  baby: "/sprites/creatures/baby.png",
+  child: "/sprites/creatures/child.png",
+  teen: "/sprites/creatures/teen.png",
+  adult: "/sprites/creatures/adult.png",
+};
+export function stageSprite(stage: Stage): string {
+  return STAGE_SPRITES[stage === "egg" ? "baby" : stage];
 }
 
-export const SPECIES: Record<Species, SpeciesInfo> = {
-  mochi: { label: "Mochi", emoji: "🌸", color: "#ffc9de", favorite: "dango", sprite: "/sprites/creatures/mochi.png" },
-  braisille: { label: "Braisille", emoji: "🔥", color: "#ffcaa8", favorite: "baies épicées", sprite: "/sprites/creatures/braisille.png" },
-  axolo: { label: "Axolo", emoji: "💧", color: "#b6ead9", favorite: "gelée d'algue", sprite: "/sprites/creatures/axolo.png" },
-  sylphe: { label: "Sylphe", emoji: "🌿", color: "#d9d2f5", favorite: "baies sucrées", sprite: "/sprites/creatures/sylphe.png" },
+export interface MorphInfo {
+  label: string;
+  /** Filtre CSS appliqué au sprite (« none » pour le roux d'origine). */
+  filter: string;
+}
+export const COLOR_MORPHS: Record<ColorMorph, MorphInfo> = {
+  ginger: { label: "Roux", filter: "none" },
+  mint: { label: "Menthe", filter: "hue-rotate(110deg) saturate(0.95)" },
+  sky: { label: "Ciel", filter: "hue-rotate(165deg) saturate(1.05)" },
+  lavender: { label: "Lavande", filter: "hue-rotate(225deg) saturate(1)" },
+  rose: { label: "Rose", filter: "hue-rotate(310deg) saturate(1.1)" },
 };
+export const ALL_MORPHS: ColorMorph[] = ["ginger", "mint", "sky", "lavender", "rose"];
 
-export const ALL_SPECIES: Species[] = ["mochi", "braisille", "axolo", "sylphe"];
+/** Filtre CSS de la variante de couleur (vide si aucune). */
+export function morphFilter(m: ColorMorph | null): string {
+  return m ? COLOR_MORPHS[m].filter : "none";
+}
 
-/** Teintes pastel des 4 œufs (cosmétique). */
-export const EGG_COLORS = ["#f7b8d6", "#bfe0f7", "#c3eccb", "#e6cdf2"] as const;
-
-/** Sprite d'œuf (pixel-art) pour une apparence donnée. */
-export function eggSprite(skin: number): string {
-  return `/sprites/eggs/egg-${skin}.png`;
+/** Sprite unique de l'œuf (les « skins » ne sont plus que des teintes CSS). */
+export const EGG_SPRITE = "/sprites/eggs/egg.png";
+export function eggSprite(_skin?: number): string {
+  return EGG_SPRITE;
+}
+/** Teinte cosmétique de l'œuf au choix (0 = d'origine). */
+const EGG_TINTS = ["none", "hue-rotate(120deg) saturate(1.1)", "hue-rotate(255deg)"] as const;
+export function eggTint(skin: number): string {
+  return EGG_TINTS[skin] ?? "none";
 }
 
 /** Chemin d'une icône pixel (UI). */

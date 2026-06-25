@@ -1,8 +1,8 @@
 // Modèle de données de Tamapokon.
 // Voir docs/Spécification Tamagotchi.md pour les règles produit.
 
-/** Les 4 espèces possibles (tirées au hasard à l'éclosion). */
-export type Species = "mochi" | "braisille" | "axolo" | "sylphe";
+/** Espèce unique du jeu : variante de couleur tirée à l'éclosion. */
+export type ColorMorph = "ginger" | "mint" | "sky" | "lavender" | "rose";
 
 /** Étapes d'évolution (cf. table « Évolution en 5 étapes »). */
 export type Stage = "egg" | "baby" | "child" | "teen" | "adult";
@@ -52,8 +52,8 @@ export interface GameState {
   /** Progression d'incubation 0..100. */
   incubation: number;
 
-  /** Espèce révélée à l'éclosion (aléatoire). */
-  species: Species | null;
+  /** Variante de couleur révélée à l'éclosion (aléatoire). */
+  colorMorph: ColorMorph | null;
   /** Nom donné par le joueur. */
   name: string;
 
