@@ -1,28 +1,23 @@
 <script lang="ts">
-  import { SPECIES, xpForLevel } from "$lib/game/config";
+  import { CREATURE, stageSprite, morphFilter, xpForLevel } from "$lib/game/config";
   import {
-    game,
-    fx,
-    feed,
-    giveTreat,
-    play,
-    pet,
-    wash,
-    toggleSleep,
+    game, fx, feed, giveTreat, play, pet, wash, toggleSleep,
   } from "$lib/game/state.svelte";
   import StatBar from "./StatBar.svelte";
+  import Icon from "./Icon.svelte";
 
-  const info = $derived(game.species ? SPECIES[game.species] : SPECIES.mochi);
+  const sprite = $derived(stageSprite(game.stage));
+  const filter = $derived(morphFilter(game.colorMorph));
 
+  // Humeur → { name pixel, fallback emoji, label }.
   const mood = $derived.by(() => {
-    if (game.asleep) return { face: "😴", label: "dort" };
+    if (game.asleep) return { name: "zzz", face: "💤", label: "dort" };
     const s = game.stats;
-    if (s.hunger < 20) return { face: "😖", label: "a faim" };
-    if (s.happiness < 30) return { face: "😒", label: "grognon" };
-    if (s.energy < 20) return { face: "🥱", label: "fatigué" };
-    if (s.cleanliness < 20) return { face: "🫧", label: "tout sale" };
-    if (s.happiness > 75) return { face: "😊", label: "content" };
-    return { face: "🙂", label: "ça va" };
+    if (s.hunger < 20) return { name: "hungry", face: "😖", label: "a faim" };
+    if (s.happiness < 30) return { name: "grumpy", face: "😒", label: "grognon" };
+    if (s.energy < 20) return { name: "sleepy", face: "🥱", label: "fatigué" };
+    if (s.cleanliness < 20) return { name: "dirty", face: "🫧", label: "tout sale" };
+    return { name: "happy", face: "😊", label: s.happiness > 75 ? "content" : "ça va" };
   });
 
   const xpNeeded = $derived(xpForLevel(game.level));
@@ -39,8 +34,8 @@
     {#if fx.evolve}<div class="evolve-glow"></div>{/if}
     {#if fx.levelUp}
       <div class="confetti">
-        {#each ["🎉", "✨", "⭐", "🎊", "💫"] as c, i (i)}
-          <span style:--i={i}>{c}</span>
+        {#each ["sparkle", "star", "sparkle", "star", "sparkle"] as c, i (i)}
+          <span style:--i={i}><Icon name={c} fallback="✨" size={16} /></span>
         {/each}
       </div>
     {/if}
@@ -49,37 +44,37 @@
       class:asleep={game.asleep}
       class:levelup={fx.levelUp}
       class:evolve={fx.evolve}
-      style:--halo={info.color}
+      style:--halo={CREATURE.color}
       onclick={pet}
       data-tauri-drag-region
       title="Câliner"
     >
-      <img class="sprite pixel" src={info.sprite} alt={info.label} />
-      <span class="mood-bubble">{game.asleep ? "💤" : mood.face}</span>
+      <img class="sprite pixel" src={sprite} alt={CREATURE.label} style:filter={filter} />
+      <span class="mood-bubble"><Icon name={mood.name} kind="mood" fallback={mood.face} size={18} /></span>
     </button>
   </div>
 
-  {#if fx.levelUp}<div class="banner">✨ Niveau {game.level} !</div>{/if}
-  {#if fx.evolve}<div class="banner evo">🌟 Évolution !</div>{/if}
+  {#if fx.levelUp}<div class="banner"><Icon name="sparkle" fallback="✨" size={13} /> Niveau {game.level} !</div>{/if}
+  {#if fx.evolve}<div class="banner evo"><Icon name="star" fallback="🌟" size={13} /> Évolution !</div>{/if}
 
   <p class="name">{game.name}</p>
   <p class="mood">{mood.label}</p>
 
   <div class="stats">
-    <StatBar icon="🍖" value={game.stats.hunger} color="#ff8aa6" />
-    <StatBar icon="🍰" value={game.stats.treat} color="#ffc46b" />
-    <StatBar icon="😴" value={game.stats.energy} color="#8fb6f0" />
-    <StatBar icon="❤️" value={game.stats.happiness} color="#f088b4" />
-    <StatBar icon="🧼" value={game.stats.cleanliness} color="#7fd9cf" />
+    <StatBar name="meat" fallback="🍖" value={game.stats.hunger} color="#ff8aa6" />
+    <StatBar name="cake" fallback="🍰" value={game.stats.treat} color="#ffc46b" />
+    <StatBar name="moon" fallback="😴" value={game.stats.energy} color="#8fb6f0" />
+    <StatBar name="heart" fallback="❤️" value={game.stats.happiness} color="#f088b4" />
+    <StatBar name="soap" fallback="🧼" value={game.stats.cleanliness} color="#7fd9cf" />
   </div>
 
   <div class="tools">
-    <button onclick={feed} title="Nourrir">🍖</button>
-    <button onclick={giveTreat} title="Friandise">🍰</button>
-    <button onclick={play} title="Jouer">🎮</button>
-    <button onclick={wash} title="Laver">🧼</button>
+    <button onclick={feed} title="Nourrir"><Icon name="meat" fallback="🍖" size={18} /></button>
+    <button onclick={giveTreat} title="Friandise"><Icon name="cake" fallback="🍰" size={18} /></button>
+    <button onclick={play} title="Jouer"><Icon name="fishtoy" fallback="🎮" size={18} /></button>
+    <button onclick={wash} title="Laver"><Icon name="soap" fallback="🧼" size={18} /></button>
     <button onclick={toggleSleep} title={game.asleep ? "Réveiller" : "Dodo"}>
-      {game.asleep ? "☀️" : "😴"}
+      {#if game.asleep}<Icon name="sun" fallback="☀️" size={18} />{:else}<Icon name="moon" fallback="😴" size={18} />{/if}
     </button>
   </div>
 </div>
