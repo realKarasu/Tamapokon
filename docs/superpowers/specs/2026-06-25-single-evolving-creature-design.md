@@ -15,10 +15,23 @@ front-facing, underwater pastel scene (user-provided image).
 
 ## Constraints
 
-- **PixelLab budget: ~32 generations** remaining (trial, $0 credits). The plan
-  must fit in budget (~23 used) and leave headroom (~9) for re-rolls. If budget
-  runs low, prioritize in this order: creature stages → functional icons →
-  mood emotes → decorative (confetti/sparkles).
+- **PixelLab budget: ~32 generations** remaining (trial, $0 credits). Real
+  generation economics (confirmed via PixelLab):
+  - `create_character` (standard mode) = **1 generation** each. Used for the
+    4 creature stages → **4 generations**.
+  - `create_1_direction_object` with `item_descriptions` = **20–40 generations
+    total** for the whole batch, producing one distinct object per description.
+    Used **once** for all icons + moods + the egg.
+  - Per-stage color = baked palettes; color morph = CSS filter → **0 gens**.
+  - So total is **~24–44 gens**; the object batch is the unpredictable
+    big-ticket item. Two safeguards keep the budget non-fatal:
+    1. **Cheap-first ordering** — generate the 4 creatures (cheap, irreplaceable)
+       before the object batch; check `get_balance` between phases; never fire a
+       call we can't afford.
+    2. **Unicode fallback** — the `Icon` component renders the original Unicode
+       emoji if its PNG is missing (`<img onerror>`), so partial or skipped
+       asset generation still ships a fully working app. Creatures have no
+       emoji fallback, which is exactly why they go first.
 - Existing stack unchanged: Tauri 2 + Svelte 5 (runes), French UI, overlay that
   only advances time while the window is visible.
 - Existing pixel-art conventions: `image-rendering: pixelated`, transparent PNGs
@@ -52,18 +65,25 @@ creature), generated to match the reference style.
    generations and inherits the "surprise reveal" role the random species used
    to play. `ginger` is the identity (no filter).
 
-## Asset inventory (~23 generations)
+## Asset inventory (~24–44 generations)
 
 Saved as transparent PNGs:
 
-- `static/sprites/creatures/` — `baby.png`, `child.png`, `teen.png`, `adult.png` (4)
+- `static/sprites/creatures/` — `baby.png`, `child.png`, `teen.png`, `adult.png`
+  (4) — each via its own `create_character` call (1 gen each), front/"south"
+  frame extracted from the directional output.
 - `static/sprites/eggs/` — `egg.png` (1 themed shark-egg: blue, spotted, tiny
   fin). The four old cosmetic egg skins collapse to this one sprite; the
   selection screen offers a few **CSS-tinted** color choices of the same sprite
-  (the old "no hint" joke no longer applies with a single creature).
+  (the old "no hint" joke no longer applies with a single creature). Generated
+  **as one item in the object batch** (no separate call).
 - `static/sprites/icons/` (12): `meat`, `cake`, `moon`, `heart`, `soap`,
   `fishtoy`, `sun`, `fire`, `snowflake`, `sparkle`, `star`, `gear`.
 - `static/sprites/moods/` (6): `happy`, `hungry`, `grumpy`, `sleepy`, `dirty`, `zzz`.
+
+Icons + moods + egg (19 items) are produced by a **single**
+`create_1_direction_object` call whose `item_descriptions` lists all 19, then
+selected/downloaded individually.
 
 ### Emoji → asset mapping
 
@@ -107,8 +127,10 @@ Kept as-is (structural / dev-only, not "emoji" in the gameplay sense): `×`
   `defaultState()` gains `colorMorph`; drop species. Bump save `version` to 2
   with a migration: old saves with `species` set → keep `phase`/stats, assign a
   default `colorMorph`, drop `species`.
-- **New `Icon.svelte`** — `{ name, kind?: "icon"|"mood", size? }` → renders an
-  `<img class="pixel">` from the right folder.
+- **New `Icon.svelte`** — `{ name, kind?: "icon"|"mood", fallback, size? }` →
+  renders an `<img class="pixel">` from the right folder, swapping to the
+  Unicode `fallback` char on image-load error (so missing/ungenerated assets
+  degrade gracefully).
 - **`StatBar.svelte`** — `icon` prop becomes an icon **name** → renders `Icon`.
 - **`Creature.svelte`** — sprite = `stageSprite(game.stage)` with the color-morph
   CSS filter; mood bubble, tool buttons, confetti, banners use `Icon`.
@@ -121,16 +143,25 @@ Kept as-is (structural / dev-only, not "emoji" in the gameplay sense): `×`
 
 ## Asset pipeline
 
-PixelLab MCP generates async (returns a job id; poll `get_*`). Single-view
-front-facing sprites are generated with the object-creation tool (transparent
-background), then downloaded and written into `static/sprites/...`.
+PixelLab MCP generates async (returns a job id; poll `get_character` /
+`get_object`). Completed jobs expose download URLs fetched over plain HTTP GET
+(no auth). All assets are saved as transparent PNGs under `static/sprites/...`.
 
-**Risk control — validate before batch:** the **first** implementation step
-generates exactly **one** sprite end-to-end (the baby creature) to (a) lock the
-art style against the reference and (b) confirm the generate → fetch PNG →
-`static/` pipeline works. Only after that succeeds do we batch-generate the
-remaining ~22 assets. This caps wasted budget at 1 generation if the approach
-needs adjustment.
+- **Creatures** — `create_character(description, proportions=chibi)` per stage;
+  from `get_character`, download the front/"south" direction frame.
+- **Icons + moods + egg** — one `create_1_direction_object(item_descriptions=[…])`
+  call; at small sizes it returns candidates in `review` status →
+  `get_object` to inspect, `select_object_frames` to keep one per item,
+  `dismiss_review` to discard the rest, then download each kept frame.
+
+**Risk control — validate before batch, measure cost:** the **first** PixelLab
+step generates exactly **one** creature (the baby) end-to-end, checking
+`get_balance` before/after to (a) lock the art style against the reference and
+(b) measure the true per-`create_character` cost and confirm the generate →
+fetch PNG → `static/` pipeline. Only then generate the other 3 creatures, then
+re-check balance before committing to the (20–40 gen) object batch. If the
+remaining balance can't cover the batch, ship creatures + code with Unicode
+fallback and report that finishing the icons needs more PixelLab credits.
 
 ## Testing / verification
 
