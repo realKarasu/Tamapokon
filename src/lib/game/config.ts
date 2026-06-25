@@ -67,3 +67,12 @@ export const EGG_COLORS = ["#f7b8d6", "#bfe0f7", "#c3eccb", "#e6cdf2"] as const;
 export function eggSprite(skin: number): string {
   return `/sprites/eggs/egg-${skin}.png`;
 }
+
+/** Chemin d'une icône pixel (UI). */
+export function iconSrc(name: string): string {
+  return `/sprites/icons/${name}.png`;
+}
+/** Chemin d'une humeur pixel (bulle de la créature). */
+export function moodSrc(name: string): string {
+  return `/sprites/moods/${name}.png`;
+}
