@@ -1,7 +1,7 @@
 // Paramètres d'équilibrage — pensés « doux » : on doit pouvoir ignorer la créature
 // 1–2 h sans drame (cf. spec). Tout est en TEMPS APP-ACTIF (ticks), jamais en temps calendaire.
 
-import type { ColorMorph, Stage } from "./types";
+import type { ColorMorph, CreatureForm, MoodFace, Stage } from "./types";
 
 /** Un tick toutes les 4 s, uniquement quand l'app est active (fenêtre visible). */
 export const TICK_MS = 4000;
@@ -43,21 +43,23 @@ export function stageForLevel(level: number): Stage {
 
 /** La créature unique du jeu (le joueur la renomme ; défaut « Pokon »). */
 export const CREATURE = {
-  label: "Requinou",
-  favorite: "petits poissons",
+  label: "Papillon",
+  favorite: "le nectar des fleurs",
   /** Halo pastel derrière le sprite. */
-  color: "#bfe6ff",
+  color: "#e3d2f7",
 } as const;
 
-/** Sprite pixel-art par étape d'évolution (l'œuf réutilise le sprite « baby »). */
-export const STAGE_SPRITES: Record<Exclude<Stage, "egg">, string> = {
-  baby: "/sprites/creatures/baby.png",
-  child: "/sprites/creatures/child.png",
-  teen: "/sprites/creatures/teen.png",
-  adult: "/sprites/creatures/adult.png",
-};
-export function stageSprite(stage: Stage): string {
-  return STAGE_SPRITES[stage === "egg" ? "baby" : stage];
+/**
+ * Forme visuelle selon l'étape : moth duveteux aux stades bébé/petit (niv 1–9),
+ * puis métamorphose en papillon aux stades ado/adulte (niv 10+).
+ */
+export function creatureForm(stage: Stage): CreatureForm {
+  return stage === "teen" || stage === "adult" ? "papillon" : "moth";
+}
+
+/** Sprite SVG de la créature selon sa forme et son expression d'humeur. */
+export function creatureSprite(form: CreatureForm, face: MoodFace): string {
+  return `/sprites/creatures/${form}-${face}.svg`;
 }
 
 export interface MorphInfo {

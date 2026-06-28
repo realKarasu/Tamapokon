@@ -1,24 +1,26 @@
 <script lang="ts">
-  import { CREATURE, stageSprite, morphFilter, xpForLevel } from "$lib/game/config";
+  import { CREATURE, creatureForm, creatureSprite, morphFilter, xpForLevel } from "$lib/game/config";
+  import type { MoodFace } from "$lib/game/types";
   import {
     game, fx, feed, giveTreat, play, pet, wash, toggleSleep,
   } from "$lib/game/state.svelte";
   import StatBar from "./StatBar.svelte";
   import Icon from "./Icon.svelte";
 
-  const sprite = $derived(stageSprite(game.stage));
-  const filter = $derived(morphFilter(game.colorMorph));
-
-  // Humeur → { name pixel, fallback emoji, label }.
+  // Humeur → { name pixel (badge), emoji fallback, label texte, expr du visage }.
   const mood = $derived.by(() => {
-    if (game.asleep) return { name: "zzz", face: "💤", label: "dort" };
+    if (game.asleep) return { name: "zzz", emoji: "💤", label: "dort", expr: "sleep" as MoodFace };
     const s = game.stats;
-    if (s.hunger < 20) return { name: "hungry", face: "😖", label: "a faim" };
-    if (s.happiness < 30) return { name: "grumpy", face: "😒", label: "grognon" };
-    if (s.energy < 20) return { name: "sleepy", face: "🥱", label: "fatigué" };
-    if (s.cleanliness < 20) return { name: "dirty", face: "🫧", label: "tout sale" };
-    return { name: "happy", face: "😊", label: s.happiness > 75 ? "content" : "ça va" };
+    if (s.hunger < 20) return { name: "hungry", emoji: "😖", label: "a faim", expr: "sad" as MoodFace };
+    if (s.happiness < 30) return { name: "grumpy", emoji: "😒", label: "grognon", expr: "sad" as MoodFace };
+    if (s.energy < 20) return { name: "sleepy", emoji: "🥱", label: "fatigué", expr: "sad" as MoodFace };
+    if (s.cleanliness < 20) return { name: "dirty", emoji: "🫧", label: "tout sale", expr: "sad" as MoodFace };
+    return { name: "happy", emoji: "😊", label: s.happiness > 75 ? "content" : "ça va", expr: (s.happiness > 75 ? "happy" : "normal") as MoodFace };
   });
+
+  // Sprite = forme (métamorphose selon le niveau) × expression d'humeur.
+  const sprite = $derived(creatureSprite(creatureForm(game.stage), mood.expr));
+  const filter = $derived(morphFilter(game.colorMorph));
 
   const xpNeeded = $derived(xpForLevel(game.level));
 </script>
@@ -50,7 +52,11 @@
       title="Câliner"
     >
       <img class="sprite pixel" src={sprite} alt={CREATURE.label} style:filter={filter} />
-      <span class="mood-bubble"><Icon name={mood.name} kind="mood" fallback={mood.face} size={18} /></span>
+    </button>
+
+    <!-- Badge d'humeur : son survol/focus révèle les jauges (discrètes). -->
+    <button type="button" class="mood-badge" aria-label={`Humeur : ${mood.label}. Voir les jauges`}>
+      <Icon name={mood.name} kind="mood" fallback={mood.emoji} size={18} />
     </button>
   </div>
 
@@ -60,7 +66,8 @@
   <p class="name">{game.name}</p>
   <p class="mood">{mood.label}</p>
 
-  <div class="stats">
+  <!-- Jauges discrètes : masquées par défaut, révélées au survol/focus du badge. -->
+  <div class="stats" role="group" aria-label="Jauges">
     <StatBar name="meat" fallback="🍖" value={game.stats.hunger} color="#ff8aa6" />
     <StatBar name="cake" fallback="🍰" value={game.stats.treat} color="#ffc46b" />
     <StatBar name="moon" fallback="😴" value={game.stats.energy} color="#8fb6f0" />
@@ -93,9 +100,9 @@
   }
   .topbar {
     position: absolute;
-    top: 9px;
-    left: 12px;
-    right: 34px;
+    top: 40px;
+    left: 14px;
+    right: 14px;
     display: flex;
     align-items: center;
     gap: 7px;
@@ -121,8 +128,8 @@
 
   .creature {
     position: relative;
-    width: 96px;
-    height: 96px;
+    width: 140px;
+    height: 140px;
     border: none;
     background: radial-gradient(circle at 50% 58%, var(--halo, #ffd9ea) 0%, transparent 66%);
     display: flex;
@@ -138,16 +145,34 @@
     filter: brightness(0.92) saturate(0.85);
   }
   .sprite {
-    width: 92px;
-    height: 92px;
+    width: 136px;
+    height: 136px;
     object-fit: contain;
+    /* SVG vectoriel : rendu lissé (pas le nearest-neighbor « découpé » du pixel-art). */
+    image-rendering: auto;
   }
-  .mood-bubble {
+
+  /* Badge d'humeur : petit pictogramme cliquable, coin haut-droit de la créature. */
+  .mood-badge {
     position: absolute;
-    top: 2px;
-    right: 6px;
-    font-size: 18px;
-    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.15));
+    top: -2px;
+    right: 2px;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 2px solid #e29cbb;
+    /* Carré arrondi (pas un cercle) : l'icône carrée ne déborde plus aux coins. */
+    border-radius: 7px;
+    background: #fff;
+    cursor: pointer;
+    box-shadow: 1px 1px 0 rgba(176, 106, 134, 0.25);
+  }
+  .mood-badge:hover {
+    background: #ffe4ef;
   }
   @keyframes bob {
     0%, 100% { transform: translateY(0); }
@@ -251,19 +276,44 @@
     color: #8a7d86;
   }
 
+  /* Jauges discrètes : panneau flottant (hors flux → ne décentre pas la créature),
+     invisible jusqu'au survol/focus du badge d'humeur — révélé en fondu. */
   .stats {
-    width: 90%;
+    position: absolute;
+    bottom: 56px;
+    left: 50%;
+    width: 84%;
+    box-sizing: border-box;
+    transform: translateX(-50%) translateY(6px);
     display: flex;
     flex-direction: column;
     gap: 5px;
-    margin-top: 2px;
+    padding: 9px 11px;
+    background: rgba(255, 255, 255, 0.96);
+    border: 2px solid #e29cbb;
+    border-radius: 8px;
+    box-shadow: 2px 3px 0 rgba(176, 106, 134, 0.2);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.16s ease, transform 0.16s ease;
+    z-index: 5;
+  }
+  .screen:has(.mood-badge:hover) .stats,
+  .screen:has(.mood-badge:focus-visible) .stats,
+  .screen:has(.stats:hover) .stats {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
   }
 
   .tools {
+    position: absolute;
+    bottom: 12px;
+    left: 0;
+    right: 0;
     display: flex;
     justify-content: center;
     gap: 7px;
-    margin-top: 2px;
   }
   .tools button {
     width: 34px;

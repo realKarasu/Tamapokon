@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { CREATURE, stageSprite, morphFilter } from "$lib/game/config";
+  import { CREATURE, creatureSprite, morphFilter } from "$lib/game/config";
   import { game, confirmHatch } from "$lib/game/state.svelte";
 
   let name = $state("");
@@ -15,7 +15,7 @@
   <p class="title">✨ Ça éclot ! ✨</p>
 
   <span class="creature" style:--halo={CREATURE.color}>
-    <img class="pixel" src={stageSprite("baby")} alt={CREATURE.label} style:filter={filter} />
+    <img class="pixel" src={creatureSprite("moth", "happy")} alt={CREATURE.label} style:filter={filter} />
   </span>
   <p class="species">Voici un <b>{CREATURE.label}</b> !</p>
 

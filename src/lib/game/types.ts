@@ -7,6 +7,12 @@ export type ColorMorph = "ginger" | "mint" | "sky" | "lavender" | "rose";
 /** Étapes d'évolution (cf. table « Évolution en 5 étapes »). */
 export type Stage = "egg" | "baby" | "child" | "teen" | "adult";
 
+/** Forme visuelle de la créature : moth duveteux (jeune), puis papillon après métamorphose. */
+export type CreatureForm = "moth" | "papillon";
+
+/** Expression faciale de la créature — un sprite par humeur. */
+export type MoodFace = "normal" | "happy" | "sad" | "sleep";
+
 /** Apparence d'œuf — purement cosmétique, aucun indice sur la créature. */
 export type EggSkin = 0 | 1 | 2 | 3;
 
