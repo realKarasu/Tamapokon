@@ -56,7 +56,7 @@
 
     <!-- Badge d'humeur : son survol/focus révèle les jauges (discrètes). -->
     <button type="button" class="mood-badge" aria-label={`Humeur : ${mood.label}. Voir les jauges`}>
-      <Icon name={mood.name} kind="mood" fallback={mood.emoji} size={18} />
+      <Icon name={mood.name} kind="mood" fallback={mood.emoji} size={42} />
     </button>
   </div>
 
@@ -75,14 +75,30 @@
     <StatBar name="soap" fallback="🧼" value={game.stats.cleanliness} color="#7fd9cf" />
   </div>
 
+  <!-- Outils : survol d'un emoji → sa jauge associée apparaît au-dessus. -->
   <div class="tools">
-    <button onclick={feed} title="Nourrir"><Icon name="meat" fallback="🍖" size={18} /></button>
-    <button onclick={giveTreat} title="Friandise"><Icon name="cake" fallback="🍰" size={18} /></button>
-    <button onclick={play} title="Jouer"><Icon name="fishtoy" fallback="🎮" size={18} /></button>
-    <button onclick={wash} title="Laver"><Icon name="soap" fallback="🧼" size={18} /></button>
-    <button onclick={toggleSleep} title={game.asleep ? "Réveiller" : "Dodo"}>
-      {#if game.asleep}<Icon name="sun" fallback="☀️" size={18} />{:else}<Icon name="moon" fallback="😴" size={18} />{/if}
-    </button>
+    <div class="tool">
+      <div class="tool-bar"><StatBar name="meat" fallback="🍖" value={game.stats.hunger} color="#ff8aa6" /></div>
+      <button onclick={feed} title="Nourrir"><Icon name="meat" fallback="🍖" size={46} /></button>
+    </div>
+    <div class="tool">
+      <div class="tool-bar"><StatBar name="cake" fallback="🍰" value={game.stats.treat} color="#ffc46b" /></div>
+      <button onclick={giveTreat} title="Friandise"><Icon name="cake" fallback="🍰" size={46} /></button>
+    </div>
+    <div class="tool">
+      <div class="tool-bar"><StatBar name="heart" fallback="❤️" value={game.stats.happiness} color="#f088b4" /></div>
+      <button onclick={play} title="Jouer"><Icon name="fishtoy" fallback="🎮" size={46} /></button>
+    </div>
+    <div class="tool">
+      <div class="tool-bar"><StatBar name="soap" fallback="🧼" value={game.stats.cleanliness} color="#7fd9cf" /></div>
+      <button onclick={wash} title="Laver"><Icon name="soap" fallback="🧼" size={46} /></button>
+    </div>
+    <div class="tool">
+      <div class="tool-bar"><StatBar name="moon" fallback="😴" value={game.stats.energy} color="#8fb6f0" /></div>
+      <button onclick={toggleSleep} title={game.asleep ? "Réveiller" : "Dodo"}>
+        {#if game.asleep}<Icon name="sun" fallback="☀️" size={46} />{:else}<Icon name="moon" fallback="😴" size={46} />{/if}
+      </button>
+    </div>
   </div>
 </div>
 
@@ -161,12 +177,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: 40px;
+    height: 40px;
     padding: 0;
     border: 2px solid #e29cbb;
-    /* Carré arrondi (pas un cercle) : l'icône carrée ne déborde plus aux coins. */
-    border-radius: 7px;
+    /* Carré arrondi (pas un cercle) ; l'icône peut déborder un peu (emoji « sticker »). */
+    border-radius: 8px;
+    overflow: visible;
     background: #fff;
     cursor: pointer;
     box-shadow: 1px 1px 0 rgba(176, 106, 134, 0.25);
@@ -313,13 +330,42 @@
     right: 0;
     display: flex;
     justify-content: center;
-    gap: 7px;
+    gap: 10px;
+  }
+  .tool {
+    position: relative;
+    display: flex;
+  }
+  /* Jauge contextuelle : apparaît au-dessus de l'emoji d'action survolé. */
+  .tool-bar {
+    position: absolute;
+    bottom: calc(100% + 7px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 84px;
+    box-sizing: border-box;
+    padding: 6px 8px;
+    background: rgba(255, 255, 255, 0.97);
+    border: 2px solid #e29cbb;
+    border-radius: 7px;
+    box-shadow: 2px 3px 0 rgba(176, 106, 134, 0.2);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+    z-index: 8;
+  }
+  /* La 1re/dernière jauge s'aligne sur son bouton pour rester dans l'écran. */
+  .tool:first-child .tool-bar { left: 0; transform: none; }
+  .tool:last-child .tool-bar { left: auto; right: 0; transform: none; }
+  .tool:hover .tool-bar,
+  .tool:focus-within .tool-bar {
+    opacity: 1;
   }
   .tools button {
-    width: 34px;
-    height: 34px;
+    width: 40px;
+    height: 40px;
     border: 2px solid #e29cbb;
-    border-radius: 5px;
+    border-radius: 6px;
     background: #ffffff;
     font-size: 16px;
     line-height: 1;
